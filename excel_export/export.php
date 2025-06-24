@@ -6,6 +6,8 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 $data = [
     [1, 'Initial project setup and configuration review.', 'Cloned repository, installed dependencies (Composer), configured local environment variables, reviewed Yii application structure, set up database connection in `config/db.php`.', 'May 26, 2025', 8, '', ''],
@@ -29,6 +31,21 @@ $data = [
     [19, 'Implement Frontend Logic for Form Wizard Confirmation Modal.', 'Wrote JavaScript/jQuery code to manage the Form Wizard Confirmation Modal. Implemented functions to show and hide the Bootstrap modal (or custom modal). Attached event listeners to relevant wizard events or AJAX success callbacks to trigger modal display. Handled user interactions with modal buttons (e.g., closing the modal on "OK" click). Ensured modal content could be dynamically updated if needed (though static content is primary for this confirmation).', 'June 19, 2025', 8, '', ''],
     [20, 'Integrate Confirmation Modal with Applicant Profile Wizard Backend.', 'Modified the `ApplicantUserController` (or relevant controller action handling the Applicant Profile wizard submission) to facilitate the display of the confirmation modal. Upon successful server-side validation and data saving for all wizard steps, ensured the backend sends a specific signal/response (e.g., a JSON flag, a specific HTTP status, or a Yii flash message) that the frontend JavaScript can detect to trigger the \'show modal\' logic. Tested the end-to-end flow from wizard submission to modal display.', 'June 20, 2025', 8, '', ''],
 ];
+
+// Convert date strings to Excel serial date numbers
+foreach ($data as &$row) {
+    // Date is in the 4th column (index 3)
+    if (isset($row[3]) && !empty($row[3])) {
+        try {
+            $dateTimeObject = new DateTime($row[3]);
+            $row[3] = Date::PHPToExcel($dateTimeObject);
+        } catch (Exception $e) {
+            // Optionally handle date parse errors, e.g., log or leave as string
+            // For now, leave as is if parsing fails
+        }
+    }
+}
+unset($row); // Unset reference to last element
 
 $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
@@ -72,6 +89,17 @@ $sheet->getColumnDimension('G')->setWidth(30);  // Supervisor Remarks
 $sheet->getStyle('C2:C' . (count($data) + 1))->getAlignment()->setWrapText(true);
 // Also wrap text for Task column as some tasks can be long
 $sheet->getStyle('B2:B' . (count($data) + 1))->getAlignment()->setWrapText(true);
+
+// Apply date formatting to the Date column (D)
+$dateColumn = 'D';
+$sheet->getStyle($dateColumn . '2:' . $dateColumn . (count($data) + 1))
+    ->getNumberFormat()
+    ->setFormatCode(NumberFormat::FORMAT_DATE_DDMMYYYY); // dd/mm/yy format often 'd/m/y' or 'dd/mm/yy' in PhpSpreadsheet constants
+                                                       // Using a more explicit one if available or custom "dd/mm/yy"
+                                                       // FORMAT_DATE_DDMMYYYY should give dd/mm/yyyy. Let's use "dd/mm/yy" custom.
+$sheet->getStyle($dateColumn . '2:' . $dateColumn . (count($data) + 1))
+    ->getNumberFormat()
+    ->setFormatCode('dd/mm/yy');
 
 
 // Set headers for download
